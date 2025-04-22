@@ -30,6 +30,7 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
         Route::delete('/{id}', [ProductsController::class, 'destroy'])->name('delete');
         Route::get('/edit/{id}', [ProductsController::class, 'edit'])->name('edit');
         Route::put('/edit/{id}', [ProductsController::class, 'update'])->name('update');
+        Route::get('/exportexcel', [DetailSalesController::class, 'exportExcelAdmin'])->name('exportexcel');
     });
 
     Route::prefix('/user')->name('user.')->group(function () {
@@ -39,6 +40,7 @@ Route::middleware(['auth', 'is_admin'])->group(function () {
         Route::get('/edit/{id}', [UserController::class, 'edit'])->name('edit');
         Route::put('/update/{id}', [UserController::class, 'update'])->name('update');
         Route::delete('/{id}', [UserController::class, 'destroy'])->name('delete');
+        Route::get('/exportexcel', [UserController::class, 'exportExcel'])->name('exportexcel');
     });
 });
 

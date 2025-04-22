@@ -19,7 +19,7 @@
     </style>
 </head>
 <body>
-    <div class="container d-flex justify-content-center align-items-center py-5">
+    <div class="container d-flex justify-content-center align-items-center vh-100">
         <div class="w-50 border rounded px-3 py-3">
             <h1 class="text-center">Login</h1>
             @if ($errors->any())

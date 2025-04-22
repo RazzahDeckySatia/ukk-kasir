@@ -22,7 +22,7 @@
       
         <!-- password -->
         <div class="mb-3">
-          <label for="password" class="form-label">Password Baru User</label>
+          <label for="password" class="form-label">Password User</label>
           <input type="password" class="form-control border-secondary" id="password" name="password">
         </div>
 

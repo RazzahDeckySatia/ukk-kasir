@@ -42,12 +42,11 @@
                     </div>
                     <div class="row fixed-bottom d-flex justify-content-end align-content-center"
                         style="margin-left: 18%; width: 83%; height: 70px; border-top: 3px solid #EEE4B1; background-color: white;">
-                        <div class="col text-center" style="margin-right: 50px;">
+                        <div class="col text-end" style="margin-right: 20px;">
                             <form action="{{ route('sales.store') }}" method="post">
                                 @csrf
-                                {{-- <input type="text" name="shop[]" id="shop"> --}}
                                 <div id="shop"></div>
-                                <button class="btn btn-primary">Selanjutnya</button>
+                                <button class="btn btn-primary" style="position: fixed; bottom: 20px; right: 20px;">Selanjutnya</button>
                             </form>
                         </div>
                     </div>

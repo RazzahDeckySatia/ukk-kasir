@@ -17,10 +17,9 @@ class SalessController extends Controller
      */
     public function index()
     {
-        $saless = saless::with('customer', 'user', 'detail_sales')->orderBy('id','desc')->get();
+        $saless = saless::with('customer', 'user', 'detail_sales')->orderBy('id', 'desc')->get();
         return view('module.pembelian.index', compact('saless'));
     }
-
 
     /**
      * Show the form for creating a new resource.
@@ -40,35 +39,30 @@ class SalessController extends Controller
             return back()->with('error', 'Pilih produk terlebih dahulu!');
         }
 
-        // Hapus data sebelumnya agar tidak terjadi duplikasi
         session()->forget('shop');
 
         $selectedProducts = $request->shop;
 
-        // Pastikan data dikirim dalam bentuk array
         if (!is_array($selectedProducts)) {
             return back()->with('error', 'Format data tidak valid!');
         }
 
-        // Simpan hanya produk yang memiliki jumlah lebih dari 0, hapus duplikasi
         $filteredProducts = collect($selectedProducts)
             ->mapWithKeys(function ($item) {
                 $parts = explode(';', $item);
                 if (count($parts) > 3) {
                     $id = $parts[0];
-                    return [$id => $item]; // Pastikan hanya 1 produk per ID
+                    return [$id => $item];
                 }
                 return [];
             })
             ->values()
             ->toArray();
 
-        // Simpan ke sesi
         session(['shop' => $filteredProducts]);
 
         return redirect()->route('sales.post');
     }
-
 
     public function post()
     {
@@ -84,33 +78,42 @@ class SalessController extends Controller
             'total_pay.required' => 'Berapa jumlah uang yang dibayarkan?',
         ]);
 
-        $newPrice = (int) preg_replace('/\D/', '', $request->total_price);
-        $newPay = (int) preg_replace('/\D/', '', $request->total_pay);
-        $newreturn = $newPay - $newPrice;
+        $newPrice = (int) preg_replace('/\D/', '', $request->total_price); // Total harga awal
+        $newPay = (int) preg_replace('/\D/', '', $request->total_pay); // Total pembayaran
+        $newreturn = $newPay - $newPrice; // Kembalian
+
+        $discount = 0; // Diskon awal
+        $finalPrice = $newPrice; // Harga setelah diskon
 
         if ($request->member === 'Member') {
-            // Mengecek apakah customer sudah pernah melakukan pembelian sebelumnya
             $existCustomer = customers::where('no_hp', $request->no_hp)->first();
-            // Akumulasi Point
-            $point = floor($newPrice / 100);
+            $pointEarned = floor($newPrice / 100); // 1 poin untuk setiap Rp. 100
+
             if ($existCustomer) {
-                // Jika customer sebelumnya sudah ada, maka update point
+                if ($request->use_points) {
+                    $pointsUsed = min($existCustomer->point, floor($newPrice / 100));
+                    $discount = $pointsUsed * 100; // 1 poin = Rp. 100
+                    $finalPrice = $newPrice - $discount;
+
+                    $existCustomer->update([
+                        'point' => $existCustomer->point - $pointsUsed,
+                    ]);
+                }
+
                 $existCustomer->update([
-                    'point' => $existCustomer->point + $point,
+                    'point' => $existCustomer->point + $pointEarned,
                 ]);
-                // Ambil ID customer
+
                 $customer_id = $existCustomer->id;
             } else {
-                // Jika customer baru, maka create customer baru
                 $existCustomer = customers::create([
                     'name' => "",
                     'no_hp' => $request->no_hp,
-                    'point' => $point,
+                    'point' => $pointEarned,
                 ]);
-                // Ambil ID customer baru
                 $customer_id = $existCustomer->id;
             }
-            // Membuat data penjualan
+
             $sales = saless::create([
                 'sale_date' => Carbon::now()->format('Y-m-d'),
                 'total_price' => $newPrice,
@@ -118,41 +121,11 @@ class SalessController extends Controller
                 'total_return' => $newreturn,
                 'customer_id' => $customer_id,
                 'user_id' => Auth::id(),
-                'point' => floor($newPrice / 100),
-                'total_point' => 0,
+                'point' => $pointEarned,
+                'total_point' => $existCustomer->point,
+                'discount' => $discount,
+                'final_price' => $finalPrice,
             ]);
-            $detailSalesData = [];
-
-            foreach ($request->shop as $shopItem) {
-                $item = explode(';', $shopItem);
-                $productId = (int) $item[0];
-                $amount = (int) $item[3];
-                $subtotal = (int) $item[4];
-
-                $detailSalesData[] = [
-                    'sale_id' => $sales->id,
-                    'product_id' => $productId,
-                    'amount' => $amount,
-                    'subtotal' => $subtotal,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-                // //menyebabkan duplikasi data
-                // detail_sales::insert($detailSalesData);
-
-                // Update stok produk di database
-                $product = products::find($productId);
-                if ($product) {
-                    $newStock = $product->stock - $amount;
-                    if ($newStock < 0) {
-                        return redirect()->back()->withErrors(['error' => 'Stok tidak mencukupi untuk produk ' . $product->name]);
-                    }
-                    $product->update(['stock' => $newStock]);
-                }
-            }
-            detail_sales::insert($detailSalesData);
-            return redirect()->route('sales.create.member', ['id' => saless::latest()->first()->id])
-                ->with('message', 'Silahkan daftar sebagai member');
         } else {
             $sales = saless::create([
                 'sale_date' => Carbon::now()->format('Y-m-d'),
@@ -163,76 +136,63 @@ class SalessController extends Controller
                 'user_id' => Auth::id(),
                 'point' => 0,
                 'total_point' => 0,
+                'discount' => 0,
+                'final_price' => $newPrice,
             ]);
-
-            $detailSalesData = [];
-
-            foreach ($request->shop as $shopItem) {
-                $item = explode(';', $shopItem);
-                $productId = (int) $item[0];
-                $amount = (int) $item[3];
-                $subtotal = (int) $item[4];
-
-                $detailSalesData[] = [
-                    'sale_id' => $sales->id,
-                    'product_id' => $productId,
-                    'amount' => $amount,
-                    'subtotal' => $subtotal,
-                    'created_at' => now(),
-                    'updated_at' => now(),
-                ];
-
-             
-
-                // Update stok produk di database
-                $product = products::find($productId);
-                if ($product) {
-                    $newStock = $product->stock - $amount;
-                    if ($newStock < 0) {
-                        return redirect()->back()->withErrors(['error' => 'Stok tidak mencukupi untuk produk ' . $product->name]);
-                    }
-                    $product->update(['stock' => $newStock]);
-                }
-            }
-            detail_sales::insert($detailSalesData);
-            return redirect()->route('sales.print.show', ['id' => $sales->id])->with('Silahkan Print');
         }
 
+        $detailSalesData = [];
+        foreach ($request->shop as $shopItem) {
+            $item = explode(';', $shopItem);
+            $productId = (int) $item[0];
+            $amount = (int) $item[3];
+            $subtotal = (int) $item[4];
+
+            $detailSalesData[] = [
+                'sale_id' => $sales->id,
+                'product_id' => $productId,
+                'amount' => $amount,
+                'subtotal' => $subtotal,
+                'created_at' => now(),
+                'updated_at' => now(),
+            ];
+
+            $product = products::find($productId);
+            if ($product) {
+                $newStock = $product->stock - $amount;
+                if ($newStock < 0) {
+                    return redirect()->back()->withErrors(['error' => 'Stok tidak mencukupi untuk produk ' . $product->name]);
+                }
+                $product->update(['stock' => $newStock]);
+            }
+        }
+        detail_sales::insert($detailSalesData);
+
+        if ($request->member === 'Member') {
+            return redirect()->route('sales.create.member', ['id' => $sales->id])
+                ->with('message', 'Silahkan daftar sebagai member');
+        } else {
+            return redirect()->route('sales.print.show', ['id' => $sales->id])->with('message', 'Silahkan Print');
+        }
     }
 
-
-    /**
-     * Display the specified resource.
-     */
     public function createmember($id)
     {
         $sale = saless::with('detail_sales.product')->findOrFail($id);
-        // Menentukan apakah customer sudah pernah melakukan pembelian sebelumnya
         $notFirst = saless::where('customer_id', $sale->customer->id)->count() != 1 ? true : false;
-        return view('module.pembelian.view-member', compact('sale','notFirst'));
+        return view('module.pembelian.view-member', compact('sale', 'notFirst'));
     }
 
-
-
-    /**
-     * Show the form for editing the specified resource.
-     */
     public function edit(saless $saless)
     {
         //
     }
 
-    /**
-     * Update the specified resource in storage.
-     */
     public function update(Request $request, saless $saless)
     {
         //
     }
 
-    /**
-     * Remove the specified resource from storage.
-     */
     public function destroy(saless $saless)
     {
         //

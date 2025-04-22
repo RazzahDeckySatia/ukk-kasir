@@ -21,7 +21,7 @@
                         </li>
                         
                         <li class="list-group-item bg-light d-flex justify-content-center align-items-center">
-                            Terakhir diperbarui: {{ now()->format('d M Y H:i') }}
+                            Terakhir diperbarui: {{ \Carbon\Carbon::now()->timezone('Asia/Jakarta')->translatedFormat('d F Y H:i:s') }}
                         </li>
                     </ul>
                 </div>
@@ -62,7 +62,7 @@
     document.addEventListener("DOMContentLoaded", function () {
         // Pie Chart
         const pieCtx = document.getElementById('salesPieChart');
-        if(pieCtx) {
+        if (pieCtx) {
             new Chart(pieCtx, {
                 type: 'pie',
                 data: {
@@ -102,7 +102,6 @@
                 }
             });
         }
-
         // Line Chart
         const lineCtx = document.getElementById('salesChart');
         if(lineCtx) {

@@ -43,9 +43,17 @@ class UserController extends Controller
         };
     }
 
-    public function index()
+    public function index(Request $request)
     {
-        $users = User::all();
+        $query = User::query();
+
+        // Tambahkan logika pencarian
+        if ($request->has('search') && $request->search != '') {
+            $query->where('name', 'like', '%' . $request->search . '%')
+                  ->orWhere('email', 'like', '%' . $request->search . '%');
+        }
+
+        $users = $query->paginate(10); // Gunakan pagination jika diperlukan
         return view('module.user.index', compact('users'));
     }
 

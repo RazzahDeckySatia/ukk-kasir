@@ -11,47 +11,65 @@ use Maatwebsite\Excel\Concerns\WithMapping;
 class salesimport implements FromCollection, WithHeadings, WithMapping
 {
     /**
-    * @return \Illuminate\Support\Collection
-    */
+     * Ambil data untuk diekspor.
+     *
+     * @return \Illuminate\Support\Collection
+     */
     public function collection()
     {
-        if (Auth::user()->role == 'employee') {
-            return saless::with('customer', 'user', 'detail_sales')->orderBy('id','desc')->get(); 
-        }else{
-            redirect()->back();
+        // Izinkan admin dan employee untuk mengakses data
+        if (Auth::user()->role === 'employee' || Auth::user()->role === 'admin') {
+            return saless::with('customer', 'user', 'detail_sales.product')->orderBy('id', 'desc')->get();
         }
+
+        // Jika bukan admin atau employee, kembalikan koleksi kosong
+        return collect([]);
     }
+
+    /**
+     * Tambahkan header untuk file Excel.
+     *
+     * @return array
+     */
     public function headings(): array
     {
         return [
-            'nama pembeli',
+            'ID Transaksi',
+            'Nama Pembeli',
             'No HP Pembeli',
-            'point Pembeli',
-            'product',
+            'Poin Pembeli',
+            'Produk',
             'Total Harga',
-            'total bayar',
-            'total discount point',
-            'total kembalian',
-            'tanggal pembelian',
+            'Total Bayar',
+            'Total Diskon Poin',
+            'Total Kembalian',
+            'Tanggal Pembelian',
         ];
     }
 
+    /**
+     * Mapping data untuk setiap baris di file Excel.
+     *
+     * @param mixed $item
+     * @return array
+     */
     public function map($item): array
     {
         return [
+            $item->id,
             optional($item->customer)->name ?? 'Bukan Member',
             optional($item->customer)->no_hp ?? '-',
             optional($item->customer)->point ?? 0,
             $item->detail_sales->map(function ($detail) {
                 return optional($detail->product)->name
-                    ? optional($detail->product)->name . ' (' . $detail->amount . ' : Rp. ' . number_format( $detail->subtotal, 0, ',', '.') . ')'
+                    ? optional($detail->product)->name . ' (' . $detail->amount . ' pcs)'
                     : 'Produk tidak tersedia';
             })->implode(', '), // Menggabungkan semua produk
-            $item->detail_sales->sum('subtotal'), // Menjumlahkan subtotal dari semua detail
+            $item->total_price,
             $item->total_pay,
-            $item->total_price - optional($item->customer)->point ?? 0,
+            $item->total_price - ($item->total_point ?? 0), // Total harga setelah diskon poin
             $item->total_return,
-            $item->created_at,
+            $item->created_at->format('d-m-Y H:i:s'), // Format tanggal pembelian
         ];
     }
-    }
+}

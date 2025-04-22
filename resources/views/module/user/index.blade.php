@@ -1,4 +1,4 @@
-    @extends('main')
+@extends('main')
     @section('title', '| User')
 
     @section('content')
@@ -7,6 +7,7 @@
         <div class="col-lg-12">
             <div class="card">
                 <div class="card-body">
+                    {{-- Header Daftar List --}}
                     <div class="d-flex justify-content-between align-items-center mb-4">
                         @if (session('success'))
                         <script>
@@ -33,10 +34,21 @@
                         </script>
                         @endif
                         <h4 class="card-title mb-0">Daftar List</h4>
-                        <a href="{{route('user.create')}}">
-                            <button type="button" class="btn btn-info mb-4">Tambah User</button>
+                    </div>
+
+                    {{-- Tombol Export Excel di pojok kiri dan Tambah User di pojok kanan --}}
+                    <div class="d-flex justify-content-between mb-3">
+                        <a href="{{ route('user.exportexcel') }}">
+                            <button type="button" class="btn btn-success">
+                                <i class="mdi mdi-file-excel"></i> Export Excel
+                            </button>
+                        </a>
+                        <a href="{{ route('user.create') }}">
+                            <button type="button" class="btn btn-info">Tambah User</button>
                         </a>
                     </div>
+
+                    {{-- Tabel Data User --}}
                     <div class="table-responsive">
                         <table class="table table-bordered">
                             <thead>

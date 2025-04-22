@@ -36,6 +36,18 @@
                         </a>
                     @endif
                 </div>
+
+                {{-- Tambahkan tombol Export Excel di atas tabel --}}
+                @if(Auth::user()->role === 'admin')          
+                    <div class="d-flex justify-content-start mb-3">
+                        <a href="{{ route('product.exportexcel') }}">
+                            <button type="button" class="btn btn-success">
+                                <i class="mdi mdi-file-excel"></i> Export Excel
+                            </button>
+                        </a>
+                    </div>
+                @endif
+
                 <div class="table-responsive">
                     <table class="table table-bordered">
                         <thead>

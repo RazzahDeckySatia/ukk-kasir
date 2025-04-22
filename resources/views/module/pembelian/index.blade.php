@@ -10,6 +10,15 @@
                     <div class="row justify-content-end mb-3">
                         <div class="col text-start">
                             <div class="row">
+                                @if (Auth::user()->role == 'admin')
+                                <div class="col-6">
+                                    <a href="{{ route('product.exportexcel') }}" class="btn btn-info">
+                                        Export Penjualan (.xlsx)
+                                    </a>
+                                </div>
+                                @endif
+                            </div>
+                            <div class="row">
                                 @if (Auth::user()->role == 'employee')
                                 <div class="col-6">
                                     <a href="{{ route('sales.exportexcel') }}" class="btn btn-info">
